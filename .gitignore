@@ -1,0 +1,19 @@
+# ── Secrets — NEVER commit these ─────────────────────────────
+# config.json holds the production database key (MySQL password).
+config.json
+config.dev.json
+*.local.json
+
+# ── Node ──────────────────────────────────────────────────────
+node_modules/
+
+# ── Runtime data & logs ───────────────────────────────────────
+data/
+*.log
+*.db
+*.db-*
+.gh_*
+
+# ── OS / editor ───────────────────────────────────────────────
+.DS_Store
+Thumbs.db
