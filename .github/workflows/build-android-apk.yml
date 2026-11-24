@@ -1,0 +1,145 @@
+name: Build Orbi AI Android APK
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'mobile_app/**'
+      - '.github/workflows/build-android-apk.yml'
+  workflow_dispatch:
+    inputs:
+      gateway_base_url:
+        description: 'Gateway Base URL injected via --dart-define=GATEWAY_BASE_URL'
+        required: false
+        default: ''
+        type: string
+      create_release:
+        description: 'Publish built APKs to GitHub Releases'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    name: Analyze, Test & Build Android APKs
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile_app
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Cache Gradle dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('mobile_app/android/**/*.gradle*', 'mobile_app/android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+
+      - name: Set up Flutter (Stable)
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install Dart & Flutter dependencies
+        run: flutter pub get
+
+      - name: Static Analysis Quality Gate
+        run: flutter analyze --no-fatal-infos
+
+      - name: Run Unit & Widget Tests
+        run: flutter test
+
+      - name: Decode Release Keystore (if configured)
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        if: env.KEYSTORE_B64 != ''
+        run: |
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/orbi-release.jks"
+          echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/orbi-release.jks" >> "$GITHUB_ENV"
+
+      - name: Resolve Gateway Base URL
+        run: |
+          INPUT_URL="${{ inputs.gateway_base_url }}"
+          VAR_URL="${{ vars.GATEWAY_BASE_URL }}"
+          if [ -n "$INPUT_URL" ]; then
+            echo "EFFECTIVE_GATEWAY_URL=$INPUT_URL" >> "$GITHUB_ENV"
+          elif [ -n "$VAR_URL" ]; then
+            echo "EFFECTIVE_GATEWAY_URL=$VAR_URL" >> "$GITHUB_ENV"
+          else
+            echo "EFFECTIVE_GATEWAY_URL=http://10.0.2.2:8080" >> "$GITHUB_ENV"
+          fi
+
+      - name: Build Split-Per-ABI Release APKs (arm64-v8a / armeabi-v7a / x86_64)
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          flutter build apk --release --split-per-abi \
+            --dart-define=GATEWAY_BASE_URL="$EFFECTIVE_GATEWAY_URL"
+
+      - name: Build Universal Release APK
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          flutter build apk --release \
+            --dart-define=GATEWAY_BASE_URL="$EFFECTIVE_GATEWAY_URL"
+
+      - name: Package Versioned APK Outputs
+        run: |
+          VERSION=$(grep '^version:' pubspec.yaml | awk '{print $2}' | cut -d'+' -f1)
+          OUT_DIR="build/release-apks"
+          mkdir -p "$OUT_DIR"
+          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk "$OUT_DIR/orbi-ai-v${VERSION}-arm64-v8a.apk"
+          cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk "$OUT_DIR/orbi-ai-v${VERSION}-armeabi-v7a.apk"
+          cp build/app/outputs/flutter-apk/app-x86_64-release.apk "$OUT_DIR/orbi-ai-v${VERSION}-x86_64.apk"
+          cp build/app/outputs/flutter-apk/app-release.apk "$OUT_DIR/orbi-ai-v${VERSION}-universal.apk"
+          ls -lh "$OUT_DIR"
+          echo "APP_VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: Upload Split APKs (arm64-v8a & ABIs)
+        uses: actions/upload-artifact@v4
+        with:
+          name: orbi-ai-v${{ env.APP_VERSION }}-split-apks
+          path: |
+            mobile_app/build/release-apks/orbi-ai-v*-arm64-v8a.apk
+            mobile_app/build/release-apks/orbi-ai-v*-armeabi-v7a.apk
+            mobile_app/build/release-apks/orbi-ai-v*-x86_64.apk
+          retention-days: 30
+
+      - name: Upload Universal APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: orbi-ai-v${{ env.APP_VERSION }}-universal-apk
+          path: mobile_app/build/release-apks/orbi-ai-v*-universal.apk
+          retention-days: 30
+
+      - name: Create GitHub Release (if requested)
+        if: inputs.create_release == true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="orbi-mobile-v${APP_VERSION}-${GITHUB_RUN_NUMBER}"
+          gh release create "$TAG" \
+            build/release-apks/*.apk \
+            --title "Orbi AI Mobile v${APP_VERSION} (Build #${GITHUB_RUN_NUMBER})" \
+            --notes "Automated Flutter release build for Orbi AI Persian Chatbot (arm64-v8a, armeabi-v7a, x86_64, universal)."

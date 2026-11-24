@@ -1,0 +1,85 @@
+name: orbi_ai
+description: دستیار هوشمند پارسی اوربی — چت‌بات استاندارد جهانی متصل به Gateway با موتور چندتمه و استودیو فایل و تصویر
+publish_to: none
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.11.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # State management & architecture
+  flutter_riverpod: ^2.6.1
+
+  # Network & security
+  dio: ^5.7.0
+  flutter_secure_storage: ^11.2.0
+  shared_preferences: ^2.5.0
+
+  # Local persistence
+  sqflite: ^2.4.6
+  path: ^1.9.1
+  path_provider: ^2.1.6
+  uuid: ^4.5.1
+
+  # Persian typography, calendar & BiDi
+  shamsi_date: ^1.1.1
+  bidi: ^2.0.13
+  intl: any
+
+  # Rich chat rendering (Markdown, LaTeX, Code highlighting, SVG, WebView)
+  flutter_markdown_plus: ^1.0.12
+  markdown: ^7.3.1
+  flutter_math_fork: ^0.7.4
+  flutter_highlight: ^0.7.0
+  highlight: ^0.7.0
+  flutter_svg: ^2.5.0
+  webview_flutter: ^4.14.1
+
+  # Media, files, PDF & sharing
+  image_picker: ^1.2.4
+  file_picker: ^13.4.1
+  image: ^4.5.4
+  pdf: ^3.13.1
+  share_plus: ^13.3.1
+  gal: ^3.0.1
+  permission_handler: ^13.0.2
+
+  # Voice (STT & TTS)
+  speech_to_text: ^7.5.0
+  flutter_tts: ^4.2.5
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  fonts:
+    - family: Vazirmatn
+      fonts:
+        - asset: assets/fonts/Vazirmatn-Light.ttf
+          weight: 300
+        - asset: assets/fonts/Vazirmatn-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Vazirmatn-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Vazirmatn-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Vazirmatn-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Vazirmatn-ExtraBold.ttf
+          weight: 800
+    - family: JetBrainsMono
+      fonts:
+        - asset: assets/fonts/JetBrainsMono-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/JetBrainsMono-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/JetBrainsMono-Bold.ttf
+          weight: 700
