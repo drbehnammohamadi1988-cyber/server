@@ -35,11 +35,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Java 17 (Temurin)
+      - name: Set up Java 21 (Temurin for AGP 9.x / Gradle 9.x)
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21'
 
       - name: Cache Gradle dependencies
         uses: actions/cache@v4
