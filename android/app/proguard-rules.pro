@@ -1,0 +1,2 @@
+-keep class com.atelier.vinyl.** { *; }
+-dontwarn androidx.media3.**
