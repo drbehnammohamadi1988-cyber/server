@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:orbi_ai/app.dart';
+import 'package:orbi_ai/core/config/app_config.dart';
 import 'package:orbi_ai/core/network/gateway_client.dart';
 import 'package:orbi_ai/core/security/secure_storage_service.dart';
 import 'package:orbi_ai/core/theme/app_theme_mode.dart';
@@ -9,6 +10,7 @@ import 'package:orbi_ai/core/theme/theme_controller.dart';
 import 'package:orbi_ai/features/gateway/data/gateway_repository.dart';
 import 'package:orbi_ai/features/gateway/domain/gateway_models.dart';
 import 'package:orbi_ai/features/gateway/presentation/gateway_providers.dart';
+import 'package:orbi_ai/features/settings/settings_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _FakeSecureStorage extends SecureStorageService {
@@ -87,5 +89,45 @@ void main() {
       container.read(themeSettingsProvider).preset,
       AppThemePreset.softCeramic,
     );
+  });
+
+  testWidgets('SettingsScreen hides Gateway connection settings cleanly',
+      (WidgetTester tester) async {
+    SharedPreferences.setMockInitialValues({
+      // Simulate an upgraded install that previously stored an emulator URL
+      'orbi_gateway_base_url': 'http://10.0.2.2:8080',
+    });
+    final prefs = await SharedPreferences.getInstance();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          secureStorageProvider.overrideWithValue(_FakeSecureStorage()),
+          gatewayRepositoryProvider.overrideWithValue(_FakeGatewayRepository()),
+        ],
+        child: const MaterialApp(
+          home: Directionality(
+            textDirection: TextDirection.rtl,
+            child: SettingsScreen(),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(SettingsScreen)),
+    );
+    expect(
+      container.read(gatewayConfigProvider).baseUrl,
+      AppConfig.defaultGatewayBaseUrl,
+    );
+
+    expect(find.text('انتخاب تم و هویت بصری زنده'), findsOneWidget);
+    expect(find.text('تنظیمات پیشرفته هوش مصنوعی و پشتیبان'), findsOneWidget);
+    expect(find.text('اتصال به هسته سرور Gateway'), findsNothing);
+    expect(find.text('آدرس Base URL سرور Gateway'), findsNothing);
+    expect(find.text('تست اتصال و سنجش پینگ'), findsNothing);
   });
 }

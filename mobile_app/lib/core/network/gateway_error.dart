@@ -70,8 +70,7 @@ class GatewayErrorMapper {
           code: GatewayErrorCode.unauthenticated,
           statusCode: statusCode,
           rawDetail: detail,
-          messageFa:
-              'کلید دسترسی (API Key) معتبر نیست یا تنظیم نشده است. از بخش تنظیمات Gateway آن را بررسی کنید.',
+          messageFa: 'دسترسی موقتاً مجاز نشد. لطفاً لحظاتی دیگر دوباره تلاش کنید.',
         );
       case 403:
         return GatewayException(
@@ -79,7 +78,7 @@ class GatewayErrorMapper {
           statusCode: statusCode,
           rawDetail: detail,
           messageFa:
-              'دسترسی به این سرویس یا مدل مجاز نیست. سطح دسترسی کلید خود را بررسی کنید.',
+              'دسترسی به این مدل موقتاً امکان‌پذیر نیست. مدل دیگری را امتحان کنید.',
         );
       case 404:
         return GatewayException(
@@ -87,8 +86,8 @@ class GatewayErrorMapper {
           statusCode: statusCode,
           rawDetail: detail,
           messageFa: detail.isNotEmpty
-              ? 'مدل یا مسیر درخواستی روی سرور یافت نشد ($detail).'
-              : 'مدل یا مسیر درخواستی روی سرور Gateway یافت نشد.',
+              ? 'مدل یا مسیر درخواستی یافت نشد ($detail).'
+              : 'مدل یا سرویس درخواستی در دسترس نیست.',
         );
       case 408:
       case 504:
@@ -159,7 +158,7 @@ class GatewayErrorMapper {
         code: GatewayErrorCode.timeout,
         isRetryable: true,
         messageFa:
-            'مهلت زمانی برقراری ارتباط با Gateway به پایان رسید. اتصال اینترنت یا آدرس سرور را بررسی کنید.',
+            'مهلت زمانی برقراری ارتباط با سرور به پایان رسید. اتصال اینترنت گوشی خود را بررسی کنید و دوباره تلاش کنید.',
       );
     }
 
@@ -178,7 +177,7 @@ class GatewayErrorMapper {
         code: GatewayErrorCode.networkError,
         isRetryable: true,
         messageFa:
-            'برقراری ارتباط با سرور Gateway ممکن نیست. از روشنایی اینترنت و درستی آدرس سرور مطمئن شوید.',
+            'برقراری ارتباط با سرور موقتاً ممکن نیست. اتصال اینترنت را بررسی کرده و دوباره تلاش کنید.',
       );
     }
 

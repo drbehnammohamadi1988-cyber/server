@@ -16,13 +16,12 @@ import '../../core/utils/persian_digits.dart';
 import '../../core/widgets/ambient_cosmic_background.dart';
 import '../../core/widgets/gradient_text.dart';
 import '../../core/widgets/surface_container.dart';
-import '../gateway/domain/gateway_models.dart';
 import '../gateway/presentation/gateway_providers.dart';
 import '../history/presentation/history_providers.dart';
 
 /// Settings screen covering live 5-theme switching, Reduced Blur ultra-light
-/// mode, Gateway URL/API-key management, Latency Ping, Model Sync, AI tuning,
-/// and JSON backup/restore.
+/// mode, AI tuning, and JSON backup/restore (server connection runs silently
+/// in the background with zero manual configuration).
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
@@ -31,52 +30,19 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
-  late final TextEditingController _urlController;
-  late final TextEditingController _apiKeyController;
   late final TextEditingController _systemPromptController;
-
-  bool _showApiKey = false;
-  bool _isTestingHealth = false;
-  HealthCheckResult? _healthResult;
 
   @override
   void initState() {
     super.initState();
     final gw = ref.read(gatewayConfigProvider);
-    _urlController = TextEditingController(text: gw.baseUrl);
-    _apiKeyController = TextEditingController();
     _systemPromptController = TextEditingController(text: gw.systemPrompt);
-    _healthResult = gw.lastHealth;
-    _loadMaskedKey();
-  }
-
-  Future<void> _loadMaskedKey() async {
-    final key = await ref.read(secureStorageProvider).readGatewayApiKey();
-    if (mounted && key != null) {
-      _apiKeyController.text = key;
-    }
   }
 
   @override
   void dispose() {
-    _urlController.dispose();
-    _apiKeyController.dispose();
     _systemPromptController.dispose();
     super.dispose();
-  }
-
-  Future<void> _saveGatewayAndTest() async {
-    setState(() => _isTestingHealth = true);
-    final notifier = ref.read(gatewayConfigProvider.notifier);
-    await notifier.updateBaseUrl(_urlController.text);
-    await notifier.updateApiKey(_apiKeyController.text);
-    final res = await notifier.runHealthCheck();
-    if (mounted) {
-      setState(() {
-        _healthResult = res;
-        _isTestingHealth = false;
-      });
-    }
   }
 
   Future<void> _exportBackup() async {
@@ -248,160 +214,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             onChanged: (v) => ref
                                 .read(themeSettingsProvider.notifier)
                                 .setFontScale(v),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    const _SectionTitle('اتصال به هسته سرور Gateway'),
-                    const SizedBox(height: 10),
-                    OrbiSurface(
-                      borderRadius: 20,
-                      reducedBlur: themeState.reducedBlur,
-                      padding: const EdgeInsets.all(14),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          TextField(
-                            controller: _urlController,
-                            textDirection: TextDirection.ltr,
-                            decoration: const InputDecoration(
-                              labelText: 'آدرس Base URL سرور Gateway',
-                              hintText: 'http://10.0.2.2:8080',
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.all(
-                                  Radius.circular(14),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Wrap(
-                            spacing: 8,
-                            children: [
-                              ActionChip(
-                                label: const Text('امولاتور (10.0.2.2:8080)'),
-                                onPressed: () {
-                                  _urlController.text = 'http://10.0.2.2:8080';
-                                },
-                              ),
-                              ActionChip(
-                                label: const Text('لوکال / ADB (127.0.0.1:8080)'),
-                                onPressed: () {
-                                  _urlController.text = 'http://127.0.0.1:8080';
-                                },
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          TextField(
-                            controller: _apiKeyController,
-                            obscureText: !_showApiKey,
-                            textDirection: TextDirection.ltr,
-                            decoration: InputDecoration(
-                              labelText: 'کلید دسترسی / توکن (اختیاری در توسعه)',
-                              hintText: 'Bearer API Key',
-                              border: const OutlineInputBorder(
-                                borderRadius: BorderRadius.all(
-                                  Radius.circular(14),
-                                ),
-                              ),
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  _showApiKey
-                                      ? Icons.visibility_off_outlined
-                                      : Icons.visibility_outlined,
-                                ),
-                                onPressed: () =>
-                                    setState(() => _showApiKey = !_showApiKey),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: FilledButton.icon(
-                                  onPressed: _isTestingHealth
-                                      ? null
-                                      : _saveGatewayAndTest,
-                                  icon: _isTestingHealth
-                                      ? const SizedBox(
-                                          width: 15,
-                                          height: 15,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            color: Colors.white,
-                                          ),
-                                        )
-                                      : const Icon(
-                                          Icons.network_check_rounded,
-                                          size: 18,
-                                        ),
-                                  label: const Text('تست اتصال و سنجش پینگ'),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              OutlinedButton.icon(
-                                onPressed: gatewayState.isSyncingModels
-                                    ? null
-                                    : () => ref
-                                        .read(gatewayConfigProvider.notifier)
-                                        .syncModels(),
-                                icon: const Icon(Icons.sync_rounded, size: 18),
-                                label: const Text('همگام‌سازی'),
-                              ),
-                            ],
-                          ),
-                          if (_healthResult != null) ...[
-                            const SizedBox(height: 10),
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(12),
-                                color: withAlphaFraction(
-                                  _healthResult!.isHealthy
-                                      ? tokens.successColor
-                                      : tokens.dangerColor,
-                                  0.14,
-                                ),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    _healthResult!.isHealthy
-                                        ? Icons.check_circle_rounded
-                                        : Icons.warning_amber_rounded,
-                                    color: _healthResult!.isHealthy
-                                        ? tokens.successColor
-                                        : tokens.dangerColor,
-                                    size: 18,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      _healthResult!.summaryFa,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodySmall
-                                          ?.copyWith(color: tokens.textPrimary),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                          const SizedBox(height: 6),
-                          SwitchListTile(
-                            contentPadding: EdgeInsets.zero,
-                            title: const Text('ارسال تصاویر در قالب Vision'),
-                            subtitle: const Text(
-                              'در صورت پشتیبانی Gateway از فرمت چندرسانه‌ای OpenAI فعال شود (در سرور متنی fallback خودکار دارد)',
-                            ),
-                            value: gatewayState.multimodalVision,
-                            onChanged: (v) => ref
-                                .read(gatewayConfigProvider.notifier)
-                                .setMultimodalVision(v),
                           ),
                         ],
                       ),

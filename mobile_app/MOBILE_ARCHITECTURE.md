@@ -4,14 +4,16 @@
 
 ---
 
-## ۱. توپولوژی سرور `gateway` و پورت‌های واقعی
+## ۱. توپولوژی سرور `gateway`، رلهٔ ایزوله `orbi-duck-relay` و اتصال HTTPS
 
-بر اساس واحد سیستم `aigw-gateway.service` و کد `internal/app/app.go`:
+بر اساس واحد سیستم `aigw-gateway.service` و کد `internal/app/app.go` به همراه لایهٔ ایزولهٔ `orbi-duck-relay.service` + `orbi-duck-tunnel.service`:
 
-| لیسنر | متغیر محیطی | پورت پیش‌فرض روی سرور | کاربری |
-|---|---|---|---|
-| **Public API HTTP Listener** | `AIGW_HTTP_LISTEN_ADDR` | `:8080` | سرویس‌دهی API چت و لیست مدل‌ها (`internal/gateway`) |
-| **Operational HTTP Listener** | `AIGW_OPS_LISTEN_ADDR` | `:8081` | Health Probes (`/health/live`, `/health/ready`) |
+| سرویس / لیسنر | آدرس | نقش و سطح دسترسی |
+|---|---|---|
+| **Orbi Stateless Duck.ai Relay** (`orbi-duck-relay.service`) | `127.0.0.1:8090` | رلهٔ کاملاً ایزوله و بدون وضعیت (Read/Chat-Only) با Systemd Sandboxing کامل؛ تنها دریافت لیست مدل‌های زنده از `duck.ai` و ردوبدل مستقیم پیام چت |
+| **HTTPS Tunnel** (`orbi-duck-tunnel.service`) | `https://park-analyses-durable-analyses.trycloudflare.com` | تونل رمزنگاری‌شده عمومی که در پس‌زمینه اپلیکیشن موبایل بدون نیاز به تنظیمات کاربر متصل می‌شود |
+| **Core Gateway API** (`aigw-gateway.service`) | `127.0.0.1:8080` | ارتباط مستقیم با `https://duck.ai` روی لوکال‌هاست |
+| **Operational HTTP Listener** (`:8081`) | داخلی فقط (`8081`) | برای کلاینت موبایل غیرفعال/مسدود است تا هیچ دسترسی عملیاتی یا تغییر سروری وجود نداشته باشد |
 
 ---
 

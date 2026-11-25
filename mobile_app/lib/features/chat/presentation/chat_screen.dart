@@ -14,7 +14,6 @@ import '../../composer/floating_glass_composer.dart';
 import '../../gateway/domain/gateway_models.dart';
 import '../../gateway/presentation/gateway_providers.dart';
 import '../../history/presentation/glass_navigation_drawer.dart';
-import '../../settings/settings_screen.dart';
 import '../domain/chat_models.dart';
 import 'chat_controller.dart';
 import 'widgets/chat_message_bubble.dart';
@@ -113,7 +112,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       Row(
                         children: [
                           Text(
-                            'انتخاب مدل از سرور Gateway',
+                            'انتخاب مدل زنده Duck.ai',
                             style: Theme.of(context).textTheme.titleMedium,
                           ),
                           const Spacer(),
@@ -159,15 +158,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                 ),
                               ),
                               TextButton(
-                                onPressed: () {
-                                  Navigator.pop(ctx);
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute<void>(
-                                      builder: (_) => const SettingsScreen(),
-                                    ),
-                                  );
-                                },
-                                child: const Text('تنظیمات'),
+                                onPressed: gw.isSyncingModels
+                                    ? null
+                                    : () => ref
+                                        .read(gatewayConfigProvider.notifier)
+                                        .syncModels(),
+                                child: const Text('تلاش مجدد'),
                               ),
                             ],
                           ),
@@ -179,8 +175,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           padding: const EdgeInsets.all(24),
                           child: Text(
                             gw.isSyncingModels
-                                ? 'در حال دریافت لیست مدل‌ها از Gateway...'
-                                : 'مدلی یافت نشد. اتصال Gateway را در تنظیمات بررسی کنید.',
+                                ? 'در حال دریافت مدل‌های زنده از Duck.ai...'
+                                : 'مدلی دریافت نشد؛ اتصال اینترنت را بررسی کرده و دوباره تلاش کنید.',
                             textAlign: TextAlign.center,
                             style: Theme.of(context).textTheme.bodySmall,
                           ),
@@ -651,7 +647,7 @@ class _WelcomeCanvasState extends State<_WelcomeCanvas>
             ),
             const SizedBox(height: 8),
             Text(
-              'با قدرت کامل Gateway، آمادهٔ گفتگو، کدنویسی، ساخت فایل PDF/HTML و تحلیل اسناد',
+              'متصل به مدل‌های زنده Duck.ai؛ آمادهٔ گفتگو، کدنویسی، ساخت فایل PDF/HTML و تحلیل اسناد',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodySmall,
             ),

@@ -177,33 +177,27 @@ class ChatController extends Notifier<ChatSessionState> {
     if (state.isStreaming) return;
 
     final fileMode = overrideFileMode ?? state.fileBuilderMode;
-    final gatewayConfig = ref.read(gatewayConfigProvider);
-    final modelId = gatewayConfig.selectedModel?.id;
-    if (modelId == null || modelId.isEmpty) {
-      if (!gatewayConfig.isSyncingModels) {
-        await ref.read(gatewayConfigProvider.notifier).syncModels();
-      }
-      final refreshedModel = ref.read(gatewayConfigProvider).selectedModel?.id;
-      if (refreshedModel == null || refreshedModel.isEmpty) {
-        final convId = state.conversationId ?? _uuid.v4();
-        final now = DateTime.now();
-        final errMsg = ChatMessageEntity(
-          id: _uuid.v4(),
-          conversationId: convId,
-          role: ChatRole.assistant,
-          content: '',
-          createdAt: now,
-          sequence: state.messages.length + 1,
-          status: MessageStatus.error,
-          errorMessage:
-              'هنوز هیچ مدلی از سرور Gateway دریافت نشده است. از بخش تنظیمات اتصال به سرور را بررسی و مدل‌ها را همگام‌سازی کنید.',
-        );
-        state = state.copyWith(
-          conversationId: convId,
-          messages: [...state.messages, errMsg],
-        );
-        return;
-      }
+    final ready = await ref.read(gatewayConfigProvider.notifier).ensureReady();
+    if (!ready) {
+      final convId = state.conversationId ?? _uuid.v4();
+      final now = DateTime.now();
+      final errMsg = ChatMessageEntity(
+        id: _uuid.v4(),
+        conversationId: convId,
+        role: ChatRole.assistant,
+        content: '',
+        createdAt: now,
+        sequence: state.messages.length + 1,
+        status: MessageStatus.error,
+        errorMessage:
+            ref.read(gatewayConfigProvider).modelErrorFa ??
+                'در حال حاضر ارتباط با سرویس هوش مصنوعی برقرار نشد. لطفاً اتصال اینترنت را بررسی کرده و دوباره تلاش کنید.',
+      );
+      state = state.copyWith(
+        conversationId: convId,
+        messages: [...state.messages, errMsg],
+      );
+      return;
     }
 
     final activeModelId = ref.read(gatewayConfigProvider).selectedModel!.id;
@@ -277,9 +271,13 @@ class ChatController extends Notifier<ChatSessionState> {
           );
     }
 
-    final modelId =
+    var modelId =
         ref.read(gatewayConfigProvider).selectedModel?.id ?? target.modelId;
-    if (modelId == null || modelId.isEmpty) return;
+    if (modelId == null || modelId.isEmpty) {
+      await ref.read(gatewayConfigProvider.notifier).ensureReady();
+      modelId = ref.read(gatewayConfigProvider).selectedModel?.id;
+      if (modelId == null || modelId.isEmpty) return;
+    }
 
     await _streamAssistantReply(
       conversationId: state.conversationId!,
@@ -315,8 +313,12 @@ class ChatController extends Notifier<ChatSessionState> {
       );
     }
 
-    final modelId = ref.read(gatewayConfigProvider).selectedModel?.id;
-    if (modelId == null || modelId.isEmpty) return;
+    var modelId = ref.read(gatewayConfigProvider).selectedModel?.id;
+    if (modelId == null || modelId.isEmpty) {
+      await ref.read(gatewayConfigProvider.notifier).ensureReady();
+      modelId = ref.read(gatewayConfigProvider).selectedModel?.id;
+      if (modelId == null || modelId.isEmpty) return;
+    }
 
     await _streamAssistantReply(
       conversationId: state.conversationId!,
@@ -634,7 +636,7 @@ class ChatController extends Notifier<ChatSessionState> {
             }
           } else {
             buffer.write(
-              '\n\n[تصویر پیوست‌شده توسط کاربر: ${att.name} — توجه: سرور فعلی فقط ورودی متنی را می‌پذیرد مگر حالت Multimodal Vision در تنظیمات فعال و در سرور پشتیبانی شود.]',
+              '\n\n[تصویر پیوست‌شده توسط کاربر: ${att.name}]',
             );
           }
         }

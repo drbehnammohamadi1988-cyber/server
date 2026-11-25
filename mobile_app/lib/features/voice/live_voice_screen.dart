@@ -143,21 +143,25 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       return;
     }
 
-    final gateway = ref.read(gatewayConfigProvider);
-    final modelId = gateway.selectedModel?.id;
-    if (modelId == null) {
-      setState(() {
-        _stage = _VoiceStage.idle;
-        _aiResponse = 'هیچ مدلی از Gateway در دسترس نیست.';
-      });
-      return;
-    }
-
     setState(() {
       _stage = _VoiceStage.thinking;
       _soundLevel = 0.25;
       _aiResponse = '';
     });
+
+    final ready = await ref.read(gatewayConfigProvider.notifier).ensureReady();
+    final gateway = ref.read(gatewayConfigProvider);
+    final modelId = ready ? gateway.selectedModel?.id : null;
+    if (modelId == null) {
+      if (mounted) {
+        setState(() {
+          _stage = _VoiceStage.idle;
+          _aiResponse =
+              'در حال حاضر ارتباط با سرویس هوش مصنوعی برقرار نشد. اینترنت را بررسی کنید.';
+        });
+      }
+      return;
+    }
 
     _voiceHistory.add(GatewayChatMessage(role: 'user', content: spoken));
 
@@ -368,7 +372,7 @@ class _LiveVoiceScreenState extends ConsumerState<LiveVoiceScreen>
       case _VoiceStage.listening:
         return 'در حال گوش دادن...';
       case _VoiceStage.thinking:
-        return 'در حال دریافت پاسخ از Gateway...';
+        return 'در حال دریافت پاسخ از هوش مصنوعی...';
       case _VoiceStage.speaking:
         return 'در حال پاسخگویی صوتی';
     }

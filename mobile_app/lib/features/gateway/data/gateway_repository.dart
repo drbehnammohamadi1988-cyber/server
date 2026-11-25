@@ -307,8 +307,7 @@ class GatewayRepository {
       throw const GatewayException(
         code: GatewayErrorCode.upstreamError,
         isRetryable: true,
-        messageFa:
-            'سرور Gateway مسیر /v1/images/generations را ندارد و خروجی برداری معتبر نیز تولید نشد. دوباره تلاش کنید.',
+        messageFa: 'خروجی تصویری معتبر تولید نشد. لطفاً دوباره تلاش کنید.',
       );
     }
 
@@ -316,7 +315,7 @@ class GatewayRepository {
       usedNativeImagesEndpoint: false,
       svgSource: extractedSvg,
       noticeFa:
-          'سرور فعلی Gateway فقط از چت متنی پشتیبانی می‌کند (/v1/images/generations یافت نشد)؛ بنابراین اثر گرافیکی برداری زنده توسط مدل هوش مصنوعی ساخته و به تصویر باکیفیت تبدیل شد.',
+          'اثر گرافیکی برداری زنده توسط مدل هوش مصنوعی ساخته و به تصویر باکیفیت تبدیل شد.',
     );
   }
 

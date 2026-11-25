@@ -23,6 +23,18 @@ void main() {
       expect(m2.isCoding, isTrue);
 
       expect(m3.supportsReasoning, isTrue);
+
+      final mLive = GatewayModel.fromJson({
+        'id': 'gpt-6-luna',
+        'object': 'model',
+        'name': 'GPT-6 Luna',
+        'owned_by': 'OpenAI',
+        'capabilities': {'vision': true, 'reasoning': true},
+      });
+      expect(mLive.displayName, 'GPT-6 Luna');
+      expect(mLive.supportsVision, isTrue);
+      expect(mLive.supportsReasoning, isTrue);
+      expect(mLive.isFast, isTrue);
     });
 
     test('parses streaming SSE JSON payloads including delta, reasoning, usage, and [DONE]', () {

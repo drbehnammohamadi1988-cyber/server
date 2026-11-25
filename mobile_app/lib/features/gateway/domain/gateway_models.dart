@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 class GatewayModel {
   const GatewayModel({
     required this.id,
+    this.displayLabel,
     this.objectType = 'model',
     this.ownedBy,
     this.supportsVision = false,
@@ -14,6 +15,7 @@ class GatewayModel {
   });
 
   final String id;
+  final String? displayLabel;
   final String objectType;
   final String? ownedBy;
   final bool supportsVision;
@@ -22,6 +24,10 @@ class GatewayModel {
   final bool isCoding;
 
   String get displayName {
+    final label = displayLabel?.trim();
+    if (label != null && label.isNotEmpty) {
+      return label;
+    }
     final slash = id.lastIndexOf('/');
     if (slash >= 0 && slash < id.length - 1) {
       return id.substring(slash + 1);
@@ -53,21 +59,30 @@ class GatewayModel {
     final supportsVision = explicitVision ??
         (lower.contains('vision') ||
             lower.contains('4o') ||
+            lower.contains('gpt-5') ||
+            lower.contains('gpt-6') ||
             lower.contains('gemini') ||
             lower.contains('claude-3') ||
+            lower.contains('claude-haiku') ||
+            lower.contains('claude-sonnet') ||
             lower.contains('pixtral'));
 
     final supportsReasoning = explicitReasoning ??
         (lower.startsWith('o1') ||
             lower.startsWith('o3') ||
             lower.startsWith('o4') ||
+            lower.contains('gpt-5') ||
+            lower.contains('gpt-6') ||
+            lower.contains('gemma4') ||
             lower.contains('reasoner') ||
             lower.contains('r1') ||
             lower.contains('thinking'));
 
     final isFast = lower.contains('mini') ||
+        lower.contains('luna') ||
         lower.contains('haiku') ||
         lower.contains('flash') ||
+        lower.contains('small') ||
         lower.contains('8b') ||
         lower.contains('turbo');
 
@@ -75,10 +90,14 @@ class GatewayModel {
         lower.contains('code') ||
         lower.contains('claude') ||
         lower.contains('gpt-4') ||
+        lower.contains('gpt-5') ||
+        lower.contains('gpt-6') ||
+        lower.contains('gemma4') ||
         lower.contains('llama-3.3');
 
     return GatewayModel(
       id: id,
+      displayLabel: json['name']?.toString(),
       objectType: (json['object'] ?? 'model').toString(),
       ownedBy: json['owned_by']?.toString(),
       supportsVision: supportsVision,

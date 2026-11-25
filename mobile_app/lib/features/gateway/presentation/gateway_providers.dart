@@ -95,22 +95,17 @@ class GatewayConfigState {
 }
 
 class GatewayConfigNotifier extends Notifier<GatewayConfigState> {
-  static const _kBaseUrl = 'orbi_gateway_base_url';
   static const _kSelectedModel = 'orbi_selected_model_id';
   static const _kSystemPrompt = 'orbi_system_prompt';
   static const _kTemperature = 'orbi_temperature';
   static const _kMaxTokens = 'orbi_max_tokens';
-  static const _kMultimodal = 'orbi_multimodal_vision';
 
   @override
   GatewayConfigState build() {
     final prefs = ref.watch(sharedPreferencesProvider);
-    final storedUrl = prefs.getString(_kBaseUrl);
-    final baseUrl = (storedUrl != null && storedUrl.trim().isNotEmpty)
-        ? AppConfig.normalizeBaseUrl(storedUrl)
-        : AppConfig.defaultGatewayBaseUrl;
+    final baseUrl = AppConfig.defaultGatewayBaseUrl;
 
-    Future.microtask(_bootstrap);
+    Future.microtask(syncModels);
 
     return GatewayConfigState(
       baseUrl: baseUrl,
@@ -118,15 +113,19 @@ class GatewayConfigNotifier extends Notifier<GatewayConfigState> {
       systemPrompt: prefs.getString(_kSystemPrompt) ?? AppConfig.defaultSystemPrompt,
       temperature: (prefs.getDouble(_kTemperature) ?? 0.7).clamp(0.0, 2.0),
       maxTokens: prefs.getInt(_kMaxTokens) ?? 2048,
-      multimodalVision: prefs.getBool(_kMultimodal) ?? false,
+      multimodalVision: false,
       selectedModelId: prefs.getString(_kSelectedModel),
     );
   }
 
-  Future<void> _bootstrap() async {
-    final apiKey = await ref.read(secureStorageProvider).readGatewayApiKey();
-    state = state.copyWith(hasApiKey: apiKey != null && apiKey.isNotEmpty);
+  /// Ensures a live model catalog is available before sending a message or
+  /// running Image Studio / Voice Mode. Returns true if a model is ready.
+  Future<bool> ensureReady() async {
+    if (state.selectedModel != null && state.models.isNotEmpty) {
+      return true;
+    }
     await syncModels();
+    return state.selectedModel != null && state.models.isNotEmpty;
   }
 
   Future<void> syncModels() async {
@@ -158,38 +157,12 @@ class GatewayConfigNotifier extends Notifier<GatewayConfigState> {
         isSyncingModels: false,
         modelErrorFa: e.messageFa,
       );
-    } catch (e) {
+    } catch (_) {
       state = state.copyWith(
         isSyncingModels: false,
-        modelErrorFa: 'همگام‌سازی مدل‌ها ناموفق بود: $e',
+        modelErrorFa: 'دریافت لیست مدل‌های زنده ناموفق بود. لطفاً اتصال اینترنت را بررسی کنید.',
       );
     }
-  }
-
-  Future<HealthCheckResult> runHealthCheck() async {
-    final result = await ref
-        .read(gatewayRepositoryProvider)
-        .checkHealth(state.baseUrl);
-    state = state.copyWith(lastHealth: result);
-    if (result.isHealthy) {
-      await syncModels();
-    }
-    return result;
-  }
-
-  Future<void> updateBaseUrl(String url) async {
-    final normalized = AppConfig.normalizeBaseUrl(url);
-    if (normalized.isEmpty) return;
-    state = state.copyWith(baseUrl: normalized, clearModelError: true);
-    await ref.read(sharedPreferencesProvider).setString(_kBaseUrl, normalized);
-    await syncModels();
-  }
-
-  Future<void> updateApiKey(String? key) async {
-    await ref.read(secureStorageProvider).writeGatewayApiKey(key);
-    final hasKey = key != null && key.trim().isNotEmpty;
-    state = state.copyWith(hasApiKey: hasKey);
-    await syncModels();
   }
 
   Future<void> selectModel(String modelId) async {
@@ -214,11 +187,6 @@ class GatewayConfigNotifier extends Notifier<GatewayConfigState> {
     final clamped = value.clamp(128, 16384);
     state = state.copyWith(maxTokens: clamped);
     await ref.read(sharedPreferencesProvider).setInt(_kMaxTokens, clamped);
-  }
-
-  Future<void> setMultimodalVision(bool enabled) async {
-    state = state.copyWith(multimodalVision: enabled);
-    await ref.read(sharedPreferencesProvider).setBool(_kMultimodal, enabled);
   }
 }
 

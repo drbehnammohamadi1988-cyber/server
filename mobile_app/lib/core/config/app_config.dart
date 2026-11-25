@@ -4,7 +4,8 @@ class AppConfig {
 
   static const String appNameFa = 'اوربی هوش';
   static const String appNameEn = 'Orbi AI';
-  static const String appTaglineFa = 'دستیار هوشمند پارسی متصل به Gateway';
+  static const String appTaglineFa =
+      'دستیار هوشمند پارسی متصل به مدل‌های زنده Duck.ai';
 
   /// Base URL injected at build time via `--dart-define=GATEWAY_BASE_URL=...`.
   static const String _definedGatewayBaseUrl = String.fromEnvironment(
@@ -12,15 +13,14 @@ class AppConfig {
     defaultValue: '',
   );
 
-  /// Default base URL when no custom URL has been configured by the user.
-  /// `10.0.2.2` maps to host loopback in Android emulators and can be edited
-  /// directly in Settings for LAN / VPS / HTTPS gateways.
+  /// Built-in default backend relay URL so the app connects silently in the
+  /// background with zero manual user configuration.
   static String get defaultGatewayBaseUrl {
     final trimmed = _definedGatewayBaseUrl.trim();
     if (trimmed.isNotEmpty) {
       return normalizeBaseUrl(trimmed);
     }
-    return 'http://10.0.2.2:8080';
+    return 'https://park-analyses-durable-analyses.trycloudflare.com';
   }
 
   /// Normalizes a gateway base URL by removing trailing slashes and an optional

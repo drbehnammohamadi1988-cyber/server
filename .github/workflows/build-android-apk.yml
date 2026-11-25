@@ -79,11 +79,11 @@ jobs:
           INPUT_URL="${{ inputs.gateway_base_url }}"
           VAR_URL="${{ vars.GATEWAY_BASE_URL }}"
           if [ -n "$INPUT_URL" ]; then
-            echo "EFFECTIVE_GATEWAY_URL=$INPUT_URL" >> "$GITHUB_ENV"
+            echo "DART_DEFINE_ARGS=--dart-define=GATEWAY_BASE_URL=$INPUT_URL" >> "$GITHUB_ENV"
           elif [ -n "$VAR_URL" ]; then
-            echo "EFFECTIVE_GATEWAY_URL=$VAR_URL" >> "$GITHUB_ENV"
+            echo "DART_DEFINE_ARGS=--dart-define=GATEWAY_BASE_URL=$VAR_URL" >> "$GITHUB_ENV"
           else
-            echo "EFFECTIVE_GATEWAY_URL=http://10.0.2.2:8080" >> "$GITHUB_ENV"
+            echo "DART_DEFINE_ARGS=" >> "$GITHUB_ENV"
           fi
 
       - name: Build Split-Per-ABI Release APKs (arm64-v8a / armeabi-v7a / x86_64)
@@ -92,8 +92,7 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          flutter build apk --release --split-per-abi \
-            --dart-define=GATEWAY_BASE_URL="$EFFECTIVE_GATEWAY_URL"
+          flutter build apk --release --split-per-abi $DART_DEFINE_ARGS
 
       - name: Build Universal Release APK
         env:
@@ -101,8 +100,7 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          flutter build apk --release \
-            --dart-define=GATEWAY_BASE_URL="$EFFECTIVE_GATEWAY_URL"
+          flutter build apk --release $DART_DEFINE_ARGS
 
       - name: Package Versioned APK Outputs
         run: |

@@ -111,16 +111,20 @@ class _ImageStudioScreenState extends ConsumerState<ImageStudioScreen> {
     final raw = _promptController.text.trim();
     if (raw.isEmpty || _isEnhancing) return;
 
-    final modelId = ref.read(gatewayConfigProvider).selectedModel?.id;
-    if (modelId == null) {
-      _showSnack('لطفاً ابتدا مدل فعال را در تنظیمات Gateway همگام‌سازی کنید.');
-      return;
-    }
-
     setState(() {
       _isEnhancing = true;
       _errorText = null;
     });
+    final ready = await ref.read(gatewayConfigProvider.notifier).ensureReady();
+    final modelId = ready ? ref.read(gatewayConfigProvider).selectedModel?.id : null;
+    if (modelId == null) {
+      if (mounted) {
+        setState(() => _isEnhancing = false);
+        _showSnack('در حال حاضر ارتباط با سرور هوش مصنوعی برقرار نشد.');
+      }
+      return;
+    }
+
     try {
       final enhanced =
           await ref.read(gatewayRepositoryProvider).enhanceImagePrompt(
@@ -144,17 +148,21 @@ class _ImageStudioScreenState extends ConsumerState<ImageStudioScreen> {
     final prompt = _promptController.text.trim();
     if (prompt.isEmpty || _isGenerating) return;
 
-    final gateway = ref.read(gatewayConfigProvider);
-    final modelId = gateway.selectedModel?.id;
-    if (modelId == null) {
-      _showSnack('مدل فعالی از Gateway یافت نشد.');
-      return;
-    }
-
     setState(() {
       _isGenerating = true;
       _errorText = null;
     });
+
+    final ready = await ref.read(gatewayConfigProvider.notifier).ensureReady();
+    final gateway = ref.read(gatewayConfigProvider);
+    final modelId = ready ? gateway.selectedModel?.id : null;
+    if (modelId == null) {
+      if (mounted) {
+        setState(() => _isGenerating = false);
+        _showSnack('ارتباط با سرویس هوش مصنوعی برقرار نشد. اینترنت خود را بررسی کنید.');
+      }
+      return;
+    }
 
     try {
       final res = await ref.read(gatewayRepositoryProvider).generateVisual(

@@ -17,7 +17,7 @@ class GatewayHttpClient {
         _dio = dio ??
             Dio(
               BaseOptions(
-                connectTimeout: const Duration(seconds: 15),
+                connectTimeout: const Duration(seconds: 20),
                 sendTimeout: const Duration(seconds: 30),
                 receiveTimeout: const Duration(minutes: 5),
                 validateStatus: (status) => status != null && status < 600,
@@ -52,29 +52,43 @@ class GatewayHttpClient {
     Duration? timeout,
   }) async {
     final normalized = AppConfig.normalizeBaseUrl(baseUrl);
-    try {
-      final headers = await _buildHeaders();
-      final response = await _dio.get<dynamic>(
-        '$normalized$path',
-        cancelToken: cancelToken,
-        options: Options(
-          headers: headers,
-          responseType: ResponseType.plain,
-          receiveTimeout: timeout ?? const Duration(seconds: 20),
-        ),
-      );
-      final code = response.statusCode ?? 0;
-      if (code < 200 || code >= 300) {
-        throw GatewayErrorMapper.fromHttpStatus(
-          statusCode: code,
-          rawBody: response.data?.toString(),
-          retryAfterHeader: response.headers.value('retry-after'),
+    for (var attempt = 0; attempt < 2; attempt++) {
+      try {
+        final headers = await _buildHeaders();
+        final response = await _dio.get<dynamic>(
+          '$normalized$path',
+          cancelToken: cancelToken,
+          options: Options(
+            headers: headers,
+            responseType: ResponseType.plain,
+            receiveTimeout: timeout ?? const Duration(seconds: 20),
+          ),
         );
+        final code = response.statusCode ?? 0;
+        if (code < 200 || code >= 300) {
+          throw GatewayErrorMapper.fromHttpStatus(
+            statusCode: code,
+            rawBody: response.data?.toString(),
+            retryAfterHeader: response.headers.value('retry-after'),
+          );
+        }
+        return response;
+      } on DioException catch (e) {
+        final transient = attempt == 0 &&
+            (e.type == DioExceptionType.connectionError ||
+                e.type == DioExceptionType.connectionTimeout);
+        if (transient && !(cancelToken?.isCancelled ?? false)) {
+          await Future<void>.delayed(const Duration(milliseconds: 600));
+          continue;
+        }
+        throw GatewayErrorMapper.fromDio(e);
       }
-      return response;
-    } on DioException catch (e) {
-      throw GatewayErrorMapper.fromDio(e);
     }
+    throw const GatewayException(
+      code: GatewayErrorCode.networkError,
+      isRetryable: true,
+      messageFa: 'ارتباط با سرور برقرار نشد. لطفاً دوباره تلاش کنید.',
+    );
   }
 
   Future<Response<dynamic>> postJson(
